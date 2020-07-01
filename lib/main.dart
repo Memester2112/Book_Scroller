@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -17,6 +19,46 @@ class MyApp extends StatelessWidget {
   }
 }
 
+class User {
+  final int userId;
+  final int id;
+  final String title;
+  final String body;
+
+  User({this.userId, this.id, this.title, this.body});
+
+//constructor
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+        userId: json['userId'],
+        id: json['id'],
+        title: json['title'],
+        body: json['body']);
+  }
+}
+
+Future<User> fetchUser() async {
+  //async is used for future libraries
+  //it waits till it gets a response, meanwhile the other processes continue
+  //when it does finally have a value it updates
+
+  final response =
+      await http.get('https://jsonplaceholder.typicode.com/posts/5');
+//The http.get() method returns a Future that contains a Response
+
+  if (response.statusCode == 200) {
+    // If the server did return a 200 OK response,
+    // then parse the JSON.
+    print('Status code = 200\n');
+    return User.fromJson(json.decode(response.body));
+  } else {
+    // If the server did not return a 200 OK response,
+    // then throw an exception.
+    print('Status code : ERROR\n');
+    throw Exception('Failed to load User data');
+  }
+}
+
 class Listings extends StatefulWidget {
   @override
   _ListingsState createState() => _ListingsState();
@@ -31,21 +73,79 @@ class _ListingsState extends State<Listings> {
     setState(() {});
   }
 
+  Future<User> futureUser;
+
+  @override
+  void initState() {
+    super.initState();
+    futureUser = fetchUser();
+  }
+
+  void page01() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text('Internet Data'),
+            ),
+            body: FutureBuilder<User>(
+              future: futureUser,
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  print('Data found\n');
+                  return Column(
+                    children: <Widget>[
+                      Text('User Id :' + snapshot.data.userId.toString()),
+                      Text('Id :' + snapshot.data.id.toString()),
+                      Text('Title :' + snapshot.data.title),
+                      Text('Body :' + snapshot.data.body),
+                    ],
+                  );
+                } else if (snapshot.hasError) {
+                  print('Error detected\n');
+                  return Text("${snapshot.error}");
+                }
+                // By default, show a loading spinner.
+                print('Spinning\n');
+                return Center(child: CircularProgressIndicator());
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget browse() {
     for (int x = 0; x < numberOfBooks; x++) collection.add('0' + x.toString());
 
-    return ListView.builder(
-        padding: EdgeInsets.all(10.0),
-        itemCount: numberOfBooks * 2,
-        scrollDirection: Axis.vertical,
-        itemBuilder: (context, i) {
-          if (i.isOdd)
-            return Divider(
-              color: Colors.blue,
-            );
-          int r = i ~/ 2;
-          return buildTile(r);
-        });
+    return Scaffold(
+      body: ListView.builder(
+          padding: EdgeInsets.all(10.0),
+          itemCount: numberOfBooks * 2,
+          scrollDirection: Axis.vertical,
+          itemBuilder: (context, i) {
+            if (i.isOdd)
+              return Divider(
+                color: Colors.blue,
+              );
+            int r = i ~/ 2;
+            return buildTile(r);
+          }),
+      floatingActionButton: CircleAvatar(
+        child: IconButton(
+          icon: Icon(
+            Icons.book,
+            color: Colors.yellow,
+            size: 30.0,
+          ),
+          onPressed: page01,
+        ),
+        radius: 25.0,
+        backgroundColor: Colors.blueAccent.shade200,
+      ),
+    );
   }
 
   Widget buildTile(int bookNumber) {
