@@ -37,13 +37,13 @@ class User {
   }
 }
 
-Future<User> fetchUser() async {
+Future<User> fetchUser(int x) async {
   //async is used for future libraries
   //it waits till it gets a response, meanwhile the other processes continue
   //when it does finally have a value it updates
 
   final response =
-      await http.get('https://jsonplaceholder.typicode.com/posts/5');
+      await http.get('https://jsonplaceholder.typicode.com/posts/$x');
 //The http.get() method returns a Future that contains a Response
 
   if (response.statusCode == 200) {
@@ -59,6 +59,21 @@ Future<User> fetchUser() async {
   }
 }
 
+final collection = Set<String>();
+
+class imageDisplayer extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final int w = ModalRoute.of(context).settings.arguments;
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Enlarged Image'),
+      ),
+      body: Image.asset('book_images/' + collection.elementAt(w - 1) + '.jpg'),
+    );
+  }
+}
+
 class Listings extends StatefulWidget {
   @override
   _ListingsState createState() => _ListingsState();
@@ -67,21 +82,16 @@ class Listings extends StatefulWidget {
 class _ListingsState extends State<Listings> {
   final cart = Set<String>(); //contains list of books already in the cart
   final int numberOfBooks = 10;
-  final collection = Set<String>();
-
-  void checkCart() {
-    setState(() {});
-  }
 
   Future<User> futureUser;
 
   @override
   void initState() {
     super.initState();
-    futureUser = fetchUser();
+    futureUser = fetchUser(5);
   }
 
-  void page01() {
+  void internetData() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (BuildContext context) {
@@ -89,32 +99,66 @@ class _ListingsState extends State<Listings> {
             appBar: AppBar(
               title: Text('Internet Data'),
             ),
-            body: FutureBuilder<User>(
-              future: futureUser,
-              builder: (context, snapshot) {
-                if (snapshot.hasData) {
-                  print('Data found\n');
-                  return Column(
-                    children: <Widget>[
-                      Text('User Id :' + snapshot.data.userId.toString()),
-                      Text('Id :' + snapshot.data.id.toString()),
-                      Text('Title :' + snapshot.data.title),
-                      Text('Body :' + snapshot.data.body),
-                    ],
-                  );
-                } else if (snapshot.hasError) {
-                  print('Error detected\n');
-                  return Text("${snapshot.error}");
-                }
-                // By default, show a loading spinner.
-                print('Spinning\n');
-                return Center(child: CircularProgressIndicator());
-              },
+            body: ListView(
+              children: <Widget>[
+                for (int w = 1; w <= 10; w++)
+                  ListTile(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => imageDisplayer(),
+                          // Pass the arguments as part of the RouteSettings. The
+                          // DetailScreen reads the arguments from these settings.
+                          settings: RouteSettings(
+                            arguments: w,
+                          ),
+                        ),
+                      );
+                    },
+                    leading: Container(
+                      height: 60.0,
+                      width: 40.0,
+                      alignment: Alignment.topRight,
+                      child: Image.asset('book_images/' +
+                          collection.elementAt(w - 1) +
+                          '.jpg'),
+                    ),
+                    title: FutureBuilder<User>(
+                      future: futureUser = fetchUser(w),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasData) {
+                          print('Data found\n');
+                          return Column(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text('User Id :' +
+                                  snapshot.data.userId.toString()),
+                              Text('Id :' + snapshot.data.id.toString()),
+                              Text('Title :' + snapshot.data.title),
+                              Text('Body :' + snapshot.data.body),
+                              Divider(
+                                color: Colors.blueAccent,
+                              ),
+                            ],
+                          );
+                        } else if (snapshot.hasError) {
+                          print('Error detected\n');
+                          return Text("${snapshot.error}");
+                        }
+                        // By default, show a loading spinner.
+                        print('Spinning\n');
+                        return Center(child: CircularProgressIndicator());
+                      },
+                    ),
+                  ),
+              ],
             ),
           );
-        },
+        }, //build context
       ),
-    );
+    ); //Navigator
   }
 
   Widget browse() {
@@ -140,7 +184,7 @@ class _ListingsState extends State<Listings> {
             color: Colors.yellow,
             size: 30.0,
           ),
-          onPressed: page01,
+          onPressed: internetData,
         ),
         radius: 25.0,
         backgroundColor: Colors.blueAccent.shade200,
